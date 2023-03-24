@@ -1,0 +1,19 @@
+[package]
+name = "bfint"
+authors = ["Chudov Sergei <chudov42@gmail.com>"]
+description = "BrainFuck interpreter implemented in Rust."
+license = "MIT"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+
+
+[lib]
+name = "bfint"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bfint-cli"
+path = "src/cli.rs"
+
+[dependencies]
