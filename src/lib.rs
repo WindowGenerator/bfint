@@ -1,6 +1,7 @@
 use std::io::{self, Read, Write};
 
-
+#[derive(PartialEq)]
+#[derive(Debug)]
 enum Instruction {
     IncrementPointer,
     DecrementPointer,
@@ -11,6 +12,8 @@ enum Instruction {
     Loop(Vec<Instruction>)
 }
 
+#[derive(PartialEq)]
+#[derive(Debug)]
 #[derive(Clone)]
 enum Lexem {
     IncrementPointer,
@@ -128,4 +131,184 @@ pub fn interpret(code: Vec<u8>) {
     let mut data_ptr = 0;
 
     interpret_instructions(&instructions, &mut memory, &mut data_ptr)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_lexems_empty() {
+        assert_eq!(get_lexems(vec![]), vec![]);
+    }
+
+    #[test]
+    fn test_get_lexems_single_lexem() {
+        assert_eq!(get_lexems(vec![b'+']), vec![Lexem::IncrementValue]);
+    }
+
+    #[test]
+    fn test_get_lexems_multiple_lexems() {
+        let code = vec![
+            b'+', b'+', b'+', b'.', b'-', b'-', b',', b'>', b'<', b'[', b']'
+        ];
+        let expected_lexems = vec![
+            Lexem::IncrementValue, Lexem::IncrementValue, Lexem::IncrementValue,
+            Lexem::WriteOperation, Lexem::DecrementValue, Lexem::DecrementValue,
+            Lexem::ReadOperation, Lexem::IncrementPointer, Lexem::DecrementPointer,
+            Lexem::LoopBegining, Lexem::LoopEnding
+        ];
+        assert_eq!(get_lexems(code), expected_lexems);
+    }
+
+    #[test]
+    fn test_get_lexems_invalid_chars() {
+        let code = vec![b'x', b'.', b'?', b'+'];
+        assert_eq!(get_lexems(code), vec![Lexem::WriteOperation, Lexem::IncrementValue]);
+    }
+
+        #[test]
+    fn test_parse_into_instructions() {
+        let lexems = vec![
+            Lexem::IncrementValue,
+            Lexem::LoopBegining,
+            Lexem::IncrementValue,
+            Lexem::LoopBegining,
+            Lexem::IncrementValue,
+            Lexem::LoopEnding,
+            Lexem::IncrementValue,
+            Lexem::LoopEnding,
+        ];
+        let instructions = parse_into_instructions(&lexems);
+        assert_eq!(
+            instructions,
+            vec![
+                Instruction::IncrementValue,
+                Instruction::Loop(vec![
+                    Instruction::IncrementValue,
+                    Instruction::Loop(vec![
+                        Instruction::IncrementValue,
+                    ]),
+                ]),
+                Instruction::IncrementValue,
+            ],
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "loop ending at '7' has no beginning")]
+    fn test_parse_into_instructions_panic_missing_loop_beginning() {
+        let lexems = vec![
+            Lexem::IncrementValue,
+            Lexem::LoopEnding,
+        ];
+        parse_into_instructions(&lexems);
+    }
+
+    #[test]
+    #[should_panic(expected = "a loop that starts at '1' doesn't have a matching ending!")]
+    fn test_parse_into_instructions_panic_missing_loop_ending() {
+        let lexems = vec![
+            Lexem::LoopBegining,
+            Lexem::IncrementValue,
+        ];
+        parse_into_instructions(&lexems);
+    }
+
+    #[test]
+    fn test_interpret_instructions_write_operation() {
+        let mut output = Vec::new();
+        let mut memory = [65, 66, 67];
+        let mut data_ptr = 0;
+        let instructions = vec![Instruction::WriteOperation];
+
+        let mut writer = io::Cursor::new(&mut output);
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+        writer.flush().unwrap();
+
+        assert_eq!(output, b"A");
+    }
+
+    #[test]
+    fn test_interpret_instructions_read_operation() {
+        let input = b"C";
+        let mut reader = io::Cursor::new(&input);
+        let mut memory = [0u8; 3];
+        let mut data_ptr = 0;
+        let instructions = vec![Instruction::ReadOperation];
+
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+        reader.read_exact(&mut memory[data_ptr as usize..data_ptr as usize+1]).unwrap();
+
+        assert_eq!(memory, [67, 0, 0]);
+    }
+
+    #[test]
+    fn test_interpret_instructions_increment_value() {
+        let mut memory = [0u8; 3];
+        let mut data_ptr = 0;
+        let instructions = vec![Instruction::IncrementValue];
+
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+
+        assert_eq!(memory, [1, 0, 0]);
+    }
+
+    #[test]
+    fn test_interpret_instructions_decrement_value() {
+        let mut memory = [1u8; 3];
+        let mut data_ptr = 0;
+        let instructions = vec![Instruction::DecrementValue];
+
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+
+        assert_eq!(memory, [0, 1, 1]);
+    }
+
+    #[test]
+    fn test_interpret_instructions_increment_pointer() {
+        let mut memory = [0u8; 3];
+        let mut data_ptr = 0;
+        let instructions = vec![Instruction::IncrementPointer];
+
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+
+        assert_eq!(data_ptr, 1);
+    }
+
+    #[test]
+    fn test_interpret_instructions_decrement_pointer() {
+        let mut memory = [0u8; 3];
+        let mut data_ptr = 1;
+        let instructions = vec![Instruction::DecrementPointer];
+
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+
+        assert_eq!(data_ptr, 0);
+    }
+
+    #[test]
+    fn test_interpret_instructions_loop() {
+        let mut memory = [1u8; 3];
+        let mut data_ptr = 0;
+        let nested_instructions = vec![
+            Instruction::DecrementValue,
+            Instruction::IncrementPointer,
+            Instruction::IncrementValue,
+            Instruction::DecrementPointer,
+            Instruction::Loop(vec![
+                Instruction::DecrementValue,
+                Instruction::IncrementValue,
+            ]),
+        ];
+        let instructions = vec![
+            Instruction::Loop(nested_instructions),
+            Instruction::IncrementValue,
+        ];
+
+        interpret_instructions(&instructions, &mut memory, &mut data_ptr);
+
+        assert_eq!(memory, [1, 1, 0]);
+    }
 }
