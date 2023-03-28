@@ -1,5 +1,5 @@
-use std::io::{self, Read};
 use bfint::interpret;
+use std::io::{self, Read};
 
 fn get_code_from_stdin() -> io::Result<Vec<u8>> {
     let mut buf: Vec<u8> = vec![];
@@ -10,7 +10,7 @@ fn get_code_from_stdin() -> io::Result<Vec<u8>> {
 fn main() {
     let code = match get_code_from_stdin() {
         Ok(code) => code,
-        Err(_) => panic!("failed to parse code")
+        Err(_) => panic!("failed to parse code"),
     };
 
     interpret(code)
