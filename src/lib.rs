@@ -1,6 +1,5 @@
 use std::io::{self, Read, Write};
 
-
 enum Instruction {
     IncrementPointer,
     DecrementPointer,
@@ -8,7 +7,7 @@ enum Instruction {
     DecrementValue,
     WriteOperation,
     ReadOperation,
-    Loop(Vec<Instruction>)
+    Loop(Vec<Instruction>),
 }
 
 #[derive(Clone)]
@@ -23,23 +22,27 @@ enum Lexem {
     LoopEnding,
 }
 
-
 const MEMORY_SIZE: usize = 30000;
-
 
 fn interpret_instructions(instructions: &[Instruction], memory: &mut [u8], data_ptr: &mut u8) {
     for instruction in instructions {
         match instruction {
             Instruction::WriteOperation => {
                 let _ = io::stdout().write_all(&[memory[*data_ptr as usize]]);
-            },
+            }
             Instruction::ReadOperation => {
                 let mut input = [0u8];
-                io::stdin().read_exact(&mut input).expect("failed to read stdin");
+                io::stdin()
+                    .read_exact(&mut input)
+                    .expect("failed to read stdin");
                 memory[*data_ptr as usize] = input[0];
-            },
-            Instruction::IncrementValue => memory[*data_ptr as usize] = memory[*data_ptr as usize].wrapping_add(1),
-            Instruction::DecrementValue => memory[*data_ptr as usize] = memory[*data_ptr as usize].wrapping_sub(1),
+            }
+            Instruction::IncrementValue => {
+                memory[*data_ptr as usize] = memory[*data_ptr as usize].wrapping_add(1)
+            }
+            Instruction::DecrementValue => {
+                memory[*data_ptr as usize] = memory[*data_ptr as usize].wrapping_sub(1)
+            }
             Instruction::IncrementPointer => *data_ptr = data_ptr.wrapping_add(1),
             Instruction::DecrementPointer => *data_ptr = data_ptr.wrapping_sub(1),
             Instruction::Loop(nested_instructions) => {
@@ -50,7 +53,6 @@ fn interpret_instructions(instructions: &[Instruction], memory: &mut [u8], data_
         }
     }
 }
-
 
 fn parse_into_instructions(lexems: &[Lexem]) -> Vec<Instruction> {
     let mut instructions: Vec<Instruction> = Vec::new();
@@ -71,33 +73,38 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Vec<Instruction> {
                     loop_start_ptr = cur_ptr;
                     loop_stack_ptr += 1;
                     None
-                },
+                }
                 Lexem::LoopEnding => panic!("loop ending at '{}' has no beginning", cur_ptr),
             };
 
             match instruction {
                 Some(instruction) => instructions.push(instruction),
-                None => ()
+                None => (),
             }
         } else {
             match operation {
                 Lexem::LoopBegining => {
                     loop_stack_ptr += 1;
-                },
+                }
                 Lexem::LoopEnding => {
                     loop_stack_ptr -= 1;
 
                     if loop_stack_ptr == 0 {
-                        instructions.push(Instruction::Loop(parse_into_instructions(&lexems[loop_start_ptr + 1 ..cur_ptr])));
+                        instructions.push(Instruction::Loop(parse_into_instructions(
+                            &lexems[loop_start_ptr + 1..cur_ptr],
+                        )));
                     }
-                },
+                }
                 _ => (),
             }
         }
     }
 
     if loop_stack_ptr != 0 {
-        panic!("a loop that starts at '{}' doesn't have a matching ending!", loop_start_ptr);
+        panic!(
+            "a loop that starts at '{}' doesn't have a matching ending!",
+            loop_start_ptr
+        );
     }
 
     instructions
@@ -114,7 +121,7 @@ fn get_lexems(code: Vec<u8>) -> Vec<Lexem> {
             b'<' => Some(Lexem::DecrementPointer),
             b'[' => Some(Lexem::LoopBegining),
             b']' => Some(Lexem::LoopEnding),
-            _ => None
+            _ => None,
         })
         .collect()
 }
