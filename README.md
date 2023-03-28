@@ -5,10 +5,10 @@ BrainFuck interpreter implemented in Rust.
 
 ## Roadmap
 
-- [x] Write interpretator core
-- [ ] Write tests for interpretator
+- [x] Write interpreter core
+- [ ] Write tests for interpreter
 - [ ] Add examples
-- [ ] Add ci/cd )
+- [x] Add ci/cd 
 - [ ] Add normal README
 - [ ] Add normal cli to project
 
