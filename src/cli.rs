@@ -13,5 +13,5 @@ fn main() {
         Err(_) => panic!("failed to parse code"),
     };
 
-    interpret(code)
+    interpret(code, &mut io::stdout(), &mut io::stdin())
 }
