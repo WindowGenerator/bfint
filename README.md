@@ -19,6 +19,17 @@ Running BrainFuck code from a file:
 bfint-cli ./examples/hello_world.bf
 ```
 
+## Examples
+
+- [hello_world.b](./examples/hello_world.b) - displays "Hello World!"
+- [fib.b](./examples/fib.b) - outputs arbitrarily many Fibonacci numbers
+- [qsort.b](./examples/qsort.b) - implements a Quicksort program
+- [random.b](./examples/random.b) - a random number generator [based on](http://brainfuck.org/random.txt) a cellular automaton
+- [shortest_hello_world.b](./examples/shortest_hello_world.b) - shortest version of hello world program in brainfuck
+
+[More examples](http://brainfuck.org/)
+
+
 ## Roadmap
 - [x] Write interpreter core
 - [x] Write tests for interpreter
@@ -34,4 +45,3 @@ Please make sure to write tests for any new functionality you add, and ensure th
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
