@@ -3,10 +3,15 @@ name = "bfint"
 authors = ["Chudov Sergei <chudov42@gmail.com>"]
 description = "BrainFuck interpreter implemented in Rust."
 license = "MIT"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 readme = "README.md"
 
+[dependencies]
+clap = { version = "4.1.14", features = ["derive"], optional = true }
+
+[features]
+build-bfint-cli = ["clap"]
 
 [lib]
 name = "bfint"
@@ -16,7 +21,7 @@ path = "src/lib.rs"
 name = "bfint-cli"
 path = "src/cli.rs"
 
-[dependencies]
+required-features = ["build-bfint-cli"]
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
