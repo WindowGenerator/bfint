@@ -1,4 +1,4 @@
-use std::io::{Read, Write};
+use std::{io::{Read, Write}};
 
 #[derive(Debug)]
 enum Instruction {
@@ -22,6 +22,20 @@ enum Lexem {
     LoopBegining,
     LoopEnding,
 }
+
+type Result<T> = std::result::Result<T, InterpreterError>;
+
+#[derive(Debug, Clone)]
+enum InterpreterError {
+    EndlessCycle,
+}
+
+// impl fmt::Display for InterpreterError {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         write!(f, "invalid")
+//     }
+// }
+// impl error::Error for InterpreterError {}
 
 const MEMORY_SIZE: usize = 30000;
 
@@ -62,7 +76,7 @@ fn interpret_instructions<A, B>(
     }
 }
 
-fn parse_into_instructions(lexems: &[Lexem]) -> Vec<Instruction> {
+fn parse_into_instructions(lexems: &[Lexem]) -> Result<Vec<Instruction>> {
     let mut instructions: Vec<Instruction> = Vec::new();
 
     let mut loop_stack_ptr: i32 = 0;
@@ -82,7 +96,7 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Vec<Instruction> {
                     loop_stack_ptr += 1;
                     None
                 }
-                Lexem::LoopEnding => panic!("loop ending at '{}' has no beginning", cur_ptr),
+                Lexem::LoopEnding => return Err(InterpreterError::EndlessCycle),
             } {
                 instructions.push(instruction)
             }
@@ -97,7 +111,7 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Vec<Instruction> {
                     if loop_stack_ptr == 0 {
                         instructions.push(Instruction::Loop(parse_into_instructions(
                             &lexems[loop_start_ptr + 1..cur_ptr],
-                        )));
+                        )?));
                     }
                 }
                 _ => (),
@@ -112,7 +126,7 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Vec<Instruction> {
         );
     }
 
-    instructions
+    Ok(instructions)
 }
 
 fn get_lexems(code: Vec<u8>) -> Vec<Lexem> {
@@ -138,7 +152,7 @@ where
 {
     let lexems = get_lexems(code);
 
-    let instructions = parse_into_instructions(&lexems);
+    let instructions = parse_into_instructions(&lexems).unwrap();
 
     let mut memory = [0u8; MEMORY_SIZE];
     let mut data_ptr = 0;
@@ -190,7 +204,7 @@ mod tests {
     fn test_memory_manupulation() {
         let instructions = parse_into_instructions(&get_lexems(
             "+++++++[>++[>+++++<-]<-]>>++<++<+".as_bytes().to_vec(),
-        ));
+        )).unwrap();
         let mut memory = [0u8; 3];
 
         interpret_instructions(
