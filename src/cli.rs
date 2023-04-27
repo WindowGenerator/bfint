@@ -2,7 +2,7 @@ use bfint::interpret;
 use std::fs;
 use std::io::{self};
 
-use clap::{Args, Parser};
+use clap::Parser;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -23,7 +23,7 @@ fn main() {
     if let Some(source_code) = &cli.code {
         interpret(
             source_code.as_bytes().to_vec(),
-            &mut io::stdout(),
+            &mut io::stout(),
             &mut io::stdin(),
         )
     }

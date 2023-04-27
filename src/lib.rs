@@ -1,4 +1,4 @@
-use std::{io::{Read, Write}};
+use std::io::{Read, Write};
 
 #[derive(Debug)]
 enum Instruction {
@@ -27,7 +27,7 @@ type Result<T> = std::result::Result<T, InterpreterError>;
 
 #[derive(Debug, Clone)]
 enum InterpreterError {
-    EndlessCycle,
+    LoopEndWithoutBegin,
 }
 
 // impl fmt::Display for InterpreterError {
@@ -96,7 +96,7 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Result<Vec<Instruction>> {
                     loop_stack_ptr += 1;
                     None
                 }
-                Lexem::LoopEnding => return Err(InterpreterError::EndlessCycle),
+                Lexem::LoopEnding => return Err(InterpreterError::LoopEndWithoutBegin),
             } {
                 instructions.push(instruction)
             }
@@ -162,7 +162,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{get_lexems, interpret, interpret_instructions, parse_into_instructions, Lexem};
+    use crate::{
+        get_lexems, interpret, interpret_instructions, parse_into_instructions, InterpreterError,
+        Lexem,
+    };
     use std::io;
     use std::io::BufWriter;
 
@@ -204,7 +207,8 @@ mod tests {
     fn test_memory_manupulation() {
         let instructions = parse_into_instructions(&get_lexems(
             "+++++++[>++[>+++++<-]<-]>>++<++<+".as_bytes().to_vec(),
-        )).unwrap();
+        ))
+        .unwrap();
         let mut memory = [0u8; 3];
 
         interpret_instructions(
@@ -233,5 +237,11 @@ mod tests {
         );
 
         assert_eq!(output_stream.buffer(), b"Hello, World!");
+    }
+
+    #[test]
+    fn test_loop_end_without_begin_error() {
+        let result = parse_into_instructions(&get_lexems("]".as_bytes().to_vec()));
+        assert!(matches!(result, Err(InterpreterError::LoopEndWithoutBegin)));
     }
 }
