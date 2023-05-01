@@ -127,17 +127,18 @@ fn clean_code(code: Vec<u8>) -> Vec<u8> {
             if line.starts_with(&vec![b'/', b'/']) {
                 return None;
             }
-            Some(line.to_owned())
+            Some(
+                line.iter()
+                    .filter_map(|symbol| match symbol {
+                        b' ' => None,
+                        b'\n' => None,
+                        other => Some(other.to_owned()),
+                    })
+                    .collect(),
+            )
         })
         .collect::<Vec<Vec<u8>>>()
         .concat()
-        .iter()
-        .filter_map(|symbol| match symbol {
-            b' ' => None,
-            b'\n' => None,
-            other => Some(other.to_owned()),
-        })
-        .collect()
 }
 
 fn get_lexems(code: Vec<u8>) -> Result<Vec<Lexem>> {
