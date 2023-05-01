@@ -28,14 +28,9 @@ type Result<T> = std::result::Result<T, InterpreterError>;
 #[derive(Debug, Clone)]
 enum InterpreterError {
     LoopEndWithoutBegin,
+    LoopWithoutEnd,
+    SyntaxError(String),
 }
-
-// impl fmt::Display for InterpreterError {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         write!(f, "invalid")
-//     }
-// }
-// impl error::Error for InterpreterError {}
 
 const MEMORY_SIZE: usize = 30000;
 
@@ -120,10 +115,7 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Result<Vec<Instruction>> {
     }
 
     if loop_stack_ptr != 0 {
-        panic!(
-            "a loop that starts at '{}' doesn't have a matching ending!",
-            loop_start_ptr
-        );
+        return Err(InterpreterError::LoopWithoutEnd);
     }
 
     Ok(instructions)
@@ -243,5 +235,11 @@ mod tests {
     fn test_loop_end_without_begin_error() {
         let result = parse_into_instructions(&get_lexems("]".as_bytes().to_vec()));
         assert!(matches!(result, Err(InterpreterError::LoopEndWithoutBegin)));
+    }
+
+    #[test]
+    fn test_loop_without_end() {
+        let result = parse_into_instructions(&get_lexems("[".as_bytes().to_vec()));
+        assert!(matches!(result, Err(InterpreterError::LoopWithoutEnd)));
     }
 }
