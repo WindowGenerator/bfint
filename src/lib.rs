@@ -29,7 +29,7 @@ type Result<T> = std::result::Result<T, InterpreterError>;
 enum InterpreterError {
     LoopEndWithoutBegin,
     LoopWithoutEnd,
-    SyntaxError(String),
+    SyntaxError(u8),
 }
 
 const MEMORY_SIZE: usize = 30000;
@@ -121,20 +121,24 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Result<Vec<Instruction>> {
     Ok(instructions)
 }
 
-fn get_lexems(code: Vec<u8>) -> Vec<Lexem> {
-    code.iter()
-        .filter_map(|&b| match b {
-            b'.' => Some(Lexem::WriteOperation),
-            b',' => Some(Lexem::ReadOperation),
-            b'+' => Some(Lexem::IncrementValue),
-            b'-' => Some(Lexem::DecrementValue),
-            b'>' => Some(Lexem::IncrementPointer),
-            b'<' => Some(Lexem::DecrementPointer),
-            b'[' => Some(Lexem::LoopBegining),
-            b']' => Some(Lexem::LoopEnding),
-            _ => None,
-        })
-        .collect()
+fn get_lexems(code: Vec<u8>) -> Result<Vec<Lexem>> {
+    let mut new_result: Vec<Lexem> = vec![];
+
+    for b in code {
+        new_result.push(match b {
+            b'.' => Lexem::WriteOperation,
+            b',' => Lexem::ReadOperation,
+            b'+' => Lexem::IncrementValue,
+            b'-' => Lexem::DecrementValue,
+            b'>' => Lexem::IncrementPointer,
+            b'<' => Lexem::DecrementPointer,
+            b'[' => Lexem::LoopBegining,
+            b']' => Lexem::LoopEnding,
+            symbol => return Err(InterpreterError::SyntaxError(symbol)),
+        });
+    }
+
+    return Ok(new_result);
 }
 
 pub fn interpret<A, B>(code: Vec<u8>, stdout: &mut A, stdin: &mut B)
@@ -142,7 +146,7 @@ where
     A: Write,
     B: Read,
 {
-    let lexems = get_lexems(code);
+    let lexems = get_lexems(code).unwrap();
 
     let instructions = parse_into_instructions(&lexems).unwrap();
 
@@ -163,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_all_lexemes_parsing() {
-        let result_vec = get_lexems(".,+-><[]".as_bytes().to_vec());
+        let result_vec = get_lexems(".,+-><[]".as_bytes().to_vec()).unwrap();
         let expected_vec = vec![
             Lexem::WriteOperation,
             Lexem::ReadOperation,
@@ -179,27 +183,22 @@ mod tests {
     }
 
     #[test]
-    fn test_lexemes_parsing_with_bad_symbols() {
-        let result_vec = get_lexems(".123,123+sdf-v>a<bet[wrg]sg".as_bytes().to_vec());
-        let expected_vec = vec![
-            Lexem::WriteOperation,
-            Lexem::ReadOperation,
-            Lexem::IncrementValue,
-            Lexem::DecrementValue,
-            Lexem::IncrementPointer,
-            Lexem::DecrementPointer,
-            Lexem::LoopBegining,
-            Lexem::LoopEnding,
-        ];
+    fn test_syntax_error() {
+        let result = get_lexems(".,+->1<[]".as_bytes().to_vec());
+        assert!(matches!(result, Err(InterpreterError::SyntaxError(b'1'))));
 
-        assert_eq!(result_vec, expected_vec);
+        let result = get_lexems(".,+->b<[]".as_bytes().to_vec());
+        assert!(matches!(result, Err(InterpreterError::SyntaxError(b'b'))));
+
+        let result = get_lexems(".,+-> b<[]".as_bytes().to_vec());
+        assert!(matches!(result, Err(InterpreterError::SyntaxError(b' '))));
     }
 
     #[test]
     fn test_memory_manupulation() {
-        let instructions = parse_into_instructions(&get_lexems(
-            "+++++++[>++[>+++++<-]<-]>>++<++<+".as_bytes().to_vec(),
-        ))
+        let instructions = parse_into_instructions(
+            &get_lexems("+++++++[>++[>+++++<-]<-]>>++<++<+".as_bytes().to_vec()).unwrap(),
+        )
         .unwrap();
         let mut memory = [0u8; 3];
 
@@ -233,13 +232,13 @@ mod tests {
 
     #[test]
     fn test_loop_end_without_begin_error() {
-        let result = parse_into_instructions(&get_lexems("]".as_bytes().to_vec()));
+        let result = parse_into_instructions(&get_lexems("]".as_bytes().to_vec()).unwrap());
         assert!(matches!(result, Err(InterpreterError::LoopEndWithoutBegin)));
     }
 
     #[test]
     fn test_loop_without_end() {
-        let result = parse_into_instructions(&get_lexems("[".as_bytes().to_vec()));
+        let result = parse_into_instructions(&get_lexems("[".as_bytes().to_vec()).unwrap());
         assert!(matches!(result, Err(InterpreterError::LoopWithoutEnd)));
     }
 }
