@@ -121,6 +121,25 @@ fn parse_into_instructions(lexems: &[Lexem]) -> Result<Vec<Instruction>> {
     Ok(instructions)
 }
 
+fn clean_code(code: Vec<u8>) -> Vec<u8> {
+    code.split(|sym| sym.eq(&b'\n'))
+        .filter_map(|line| {
+            if line.starts_with(&vec![b'/', b'/']) {
+                return None;
+            }
+            Some(line.to_owned())
+        })
+        .collect::<Vec<Vec<u8>>>()
+        .concat()
+        .iter()
+        .filter_map(|symbol| match symbol {
+            b' ' => None,
+            b'\n' => None,
+            other => Some(other.to_owned()),
+        })
+        .collect()
+}
+
 fn get_lexems(code: Vec<u8>) -> Result<Vec<Lexem>> {
     let mut new_result: Vec<Lexem> = vec![];
 
@@ -146,7 +165,7 @@ where
     A: Write,
     B: Read,
 {
-    let lexems = get_lexems(code).unwrap();
+    let lexems = get_lexems(clean_code(code)).unwrap();
 
     let instructions = parse_into_instructions(&lexems).unwrap();
 
@@ -159,8 +178,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        get_lexems, interpret, interpret_instructions, parse_into_instructions, InterpreterError,
-        Lexem,
+        clean_code, get_lexems, interpret, interpret_instructions, parse_into_instructions,
+        InterpreterError, Lexem,
     };
     use std::io;
     use std::io::BufWriter;
@@ -180,6 +199,23 @@ mod tests {
         ];
 
         assert_eq!(result_vec, expected_vec);
+    }
+
+    #[test]
+    fn test_clean_code() {
+        assert_eq!(
+            clean_code(". ,+->1< [ + -] ".as_bytes().to_owned()),
+            ".,+->1<[+-]".as_bytes()
+        );
+        assert_eq!(
+            clean_code(". \n ,+->1< [ + -] ".as_bytes().to_owned()),
+            ".,+->1<[+-]".as_bytes()
+        );
+
+        assert_eq!(
+            clean_code("// Example\n.,+->1< [ + -] ".as_bytes().to_owned()),
+            ".,+->1<[+-]".as_bytes()
+        );
     }
 
     #[test]
