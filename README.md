@@ -33,7 +33,7 @@ bfint-cli ./examples/hello_world.bf
 ## Roadmap
 - [x] Write interpreter core
 - [x] Write tests for interpreter
-- [ ] Add examples
+- [x] Add examples
 - [x] Add ci/cd 
 - [x] Add normal README
 - [x] Add normal cli to project
